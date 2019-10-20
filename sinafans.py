@@ -10,21 +10,27 @@ import threading
 import tkinter as tk
 import configparser
 import os
+import tkinter.messagebox
+from tkinter import simpledialog
 
 class SinaFans:
 
-    def __init__(self,window,lb):
+    def __init__(self,window,lb,new_fans):
         self.window = window
         self.lb = lb
         self.search_url = 'https://s.weibo.com/user?q=%s&Refer=weibo_user'
         self.search_fans_url = 'https://weibo.com/%s/fans?page=%s'
         self.user_index = 0
         self.config_file = 'config.ini'
+        self.new_fans_num = 0
+        self.new_fans = new_fans
+        self.RUN_STATUS = True
+        self.run_selec_label = '' # 存储运行中label防止脚本运行中切换lable
         
-
         # 读取生成配置
         self.read_config()
         self.collect_group = self.get_config('label','default')
+        self.period = int(self.get_config('scrapy','sleep'))
 
         self.sina_header =  {
             'User-Agent':'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36',
@@ -40,7 +46,7 @@ class SinaFans:
             config['login'] = {'Cookie': ''}
             config['collect'] = {}
             config['collect']['默认标签'] = ''
-            config['scrapy'] = {'sleep':'1'}
+            config['scrapy'] = {'sleep':'1','submit_url':'http://dyapi.bjbctx.local/api/weibo/addFans'}
             config['label'] = {'default':'默认标签'}
 
             with open(config_file, 'w+') as configfile:
@@ -65,8 +71,15 @@ class SinaFans:
 
     # 设置默认标签
     def set_default_label(self,label):
+        # 切换标签时重置获取采集用户list的位置
+        self.user_index = 0
         self.collect_group = label
         self.set_config('label','default',label)
+
+    # 设置每轮采集的间隔
+    def set_period(self,period):
+        self.set_config('scrapy','sleep',period)
+        self.period = int(period) 
 
     def search_user_fans(self,nickname,page=1):
         search_res = self.sina_get(self.search_url % nickname)
@@ -83,13 +96,18 @@ class SinaFans:
         mach_fans = re.findall(r'fnick=(.{1,20})&f=',search_fans_res.text)
         if '新手指南' in mach_fans:
             mach_fans.remove('新手指南')
-        print(fans_url,mach_fans)
+        # 提交匹配的粉丝
+        if(len(mach_fans) > 0):    
+            self.submit_fans(mach_fans)
+
         for m in mach_fans:
             self.lb.insert(0,m)
         # self.lb.insert(0,current_user)
         time.sleep(3)
         print(nickname+': ','第 '+str(page)+' 页')
-        if len(mach_fans) > 20:
+        print(len(mach_fans))
+        print(page)
+        if len(mach_fans) >= 10 and page < 5:
             page += 1
             return self.search_user_fans(nickname,page)
 
@@ -108,21 +126,44 @@ class SinaFans:
 
     def get_user_list(self):
         li = self.get_config('collect',self.collect_group)
+        if li == '':
+            time.sleep(2)
+            return []
+        self.run_selec_label = self.collect_group
         tar = [str(x) for x in li.split('||')]
         return tar
 
     def get_user(self):
-        while True:
+        while self.RUN_STATUS:
             user_list = self.get_user_list()
+
             if len(user_list) <= self.user_index:
                 self.user_index = 0
 
-            current_user = user_list[self.user_index]
-            self.window.title('正在采集：'+current_user)
-            
-            self.user_index += 1
-            time.sleep(1)
-            self.search_user_fans(current_user)
+            if len(user_list) == 0:
+                tkinter.messagebox.showinfo(title='提示',message='请添加待采集粉丝后重试')
+                return False
+            else:
+                current_user = user_list[self.user_index]
+                self.window.title('正在采集：'+current_user)
+                
+                self.user_index += 1
+                time.sleep(1)
+                self.search_user_fans(current_user)
+                time.sleep(self.period)
+
+    # 提交粉丝数据
+    def submit_fans(self,mach_fans):
+        submit_header =  {
+            'Accept':'application/jgwl.douyin.v1+json',
+            'Content-Type':'application/x-www-form-urlencoded', # 读取cookie务必使用本类中方法
+        }
+        data = {'group':self.run_selec_label,'fans':json.dumps(mach_fans)}
+        sub = requests.post(self.get_config('scrapy','submit_url'), data, headers=submit_header)
+        if sub:
+            js_new = sub.json()
+            self.new_fans_num += int(js_new['new'])
+            self.new_fans.set('新添加粉丝： '+str(self.new_fans_num))
 
     def start(self):
         self.mythread = threading.Thread(target=self.get_user)
