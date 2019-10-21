@@ -29,13 +29,10 @@ class SinaFans:
         
         # 读取生成配置
         self.read_config()
+        self.login()
         self.collect_group = self.get_config('label','default')
         self.period = int(self.get_config('scrapy','sleep'))
 
-        self.sina_header =  {
-            'User-Agent':'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36',
-            'Cookie':self.get_config('login','Cookie'), # 读取cookie务必使用本类中方法
-        }
         print(self.get_config('collect',self.collect_group))
 
 
@@ -105,8 +102,7 @@ class SinaFans:
         # self.lb.insert(0,current_user)
         time.sleep(3)
         print(nickname+': ','第 '+str(page)+' 页')
-        print(len(mach_fans))
-        print(page)
+
         if len(mach_fans) >= 10 and page < 5:
             page += 1
             return self.search_user_fans(nickname,page)
@@ -115,6 +111,8 @@ class SinaFans:
         self.set_config('collect',label,'')
 
     def add_user_list(self,input_list):
+        if input_list == '':
+            return
         user_list = self.get_user_list()
         add_user = input_list.split('||')
 
@@ -151,6 +149,13 @@ class SinaFans:
                 time.sleep(1)
                 self.search_user_fans(current_user)
                 time.sleep(self.period)
+
+    # 登录
+    def login(self):
+        self.sina_header =  {
+            'User-Agent':'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36',
+            'Cookie':self.get_config('login','Cookie'), # 读取cookie务必使用本类中方法
+        }
 
     # 提交粉丝数据
     def submit_fans(self,mach_fans):

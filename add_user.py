@@ -54,6 +54,7 @@ def login():
     global script
     _cookie = simpledialog.askstring('登录账号','')
     script.set_config('login','cookie',_cookie)
+    script.login()
 
 def add_lable():
     global script
