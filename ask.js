@@ -17,30 +17,46 @@ function startApp() {
 
 function doSearch(){
     className("android.view.View").desc("发现").findOne(5000).click();
-    id('tv_search_keyword').click().setText('你好')
-    sleep(5000)
+    var ob = id('tv_search_keyword').findOne()
+    click(width*0.5,ob.bounds().centerY())
+    sleep(500)
+    click(width*0.5,ob.bounds().centerY())
+    sleep(1000)
+    var ob = id('tv_search_keyword').findOne().setText('冰原上空的飞燕')
+    sleep(2000)
+    
+    click("冰原上空的飞燕")
+    sleep(2000)
+    while(!className('android.widget.Buttonandroid.widget.TextView').desc('聊天').exists()){
+        back();
+        sleep(200);
+        back();
+        return false
+    }
+    return true;
+
+}
+
+function do_ask(){
+    click('聊天')
+
 }
 
 function ask(){
     startApp();
     try {
-        doSearch()
+        search_res = doSearch()
+        if(search_res){
+            do_ask();
+        }
     } catch (error) {
         sleep(5000);
         ask();
     }
 }
 
-// device.keepScreenOn()
-// startApp()
-// ask()
+device.keepScreenOn()
+startApp()
+ask()
 // click(width*0.5,)
 
-var ob = id('tv_search_keyword').findOne()
-click(width*0.5,ob.bounds().centerY())
-sleep(5000)
-click(width*0.5,ob.bounds().centerY())
-sleep(2000)
-var ob = id('tv_search_keyword').findOne().setText('电影')
-sleep(1000)
-KeyCode()
