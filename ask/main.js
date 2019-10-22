@@ -2,9 +2,6 @@
 
 ui.layout(
     <vertical>
-        <appbar>
-            <toolbar title="抖音工具集"/>
-        </appbar>
         <Switch id="autoService" text="无障碍服务" checked="{{auto.service != null}}" padding="15 10 8 10" textSize="15sp"/>
         <vertical padding="16 40" >
             <horizontal>
@@ -14,12 +11,13 @@ ui.layout(
 
             <horizontal>
                 <text textSize="16sp" textColor="black" text="设置时间:" w="120"/>
-                <input id="name" text="10,11,15,16"/>
+                <input id="period" text="10,11,15,16"/>
             </horizontal>
 
             <horizontal> 
                 <text textSize="16sp" textColor="black" text="选择标签:" w="120" />
-                <button text="点击设置" style="Widget.AppCompat.Button.Borderless.Colored"/>
+                <text textSize="16sp" text="" id="selected_lable" />
+                <button text="点击设置" id="label" style="Widget.AppCompat.Button.Borderless.Colored"/>
             </horizontal>
 
         </vertical>
@@ -48,7 +46,41 @@ ui.emitter.on("resume", function() {
     ui.autoService.checked = auto.service != null;
 });
 
-ui.ask.setText("你好！");
+var storage = storages.create('sina');
+var ask = storage.get('ask');
+var selected_text = storage.get('selected_text');
+
+var lable_list = ["萝卜", "白菜", "豆腐", "香菇"]
+if(typeof(ask) == 'undefined') {
+    ask = '你好！'
+}
+if(typeof(selected_text) == 'undefined'){
+    selected_text = '455'
+}
+ui.ask.setText(ask);
+ui.selected_lable.setText(selected_text)
+
+
+ui.save.click(function(){
+    var ask = ui.ask.text();
+    var selected_text = ui.selected_lable.text();
+
+    storage.put('selected_text', selected_text);
+    storage.put('ask', ask);
+    toast('保存成功！');
+})
+
+ui.label.click(function(){
+    dialogs.multiChoice("请至少选择一个标签", lable_list)
+    .then(index => {
+       var lab_sel = [];
+        for(var i=0;i<index.length;i++){
+            lab_sel.push(lable_list[index[i]]);
+        }
+        ui.selected_lable.setText(lab_sel.join(','));
+    
+    });
+});
 
 // var items = [
 //     {name: "竟品粉采集",url:"http://dyapi.bjbctx.com/collect_fans.js", desc: "采集竟品粉丝"}, 
