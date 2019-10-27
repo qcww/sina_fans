@@ -7,24 +7,24 @@ ui.layout(
             <horizontal>
                 <text textSize="16sp" textColor="black" text="请输入招呼语:" w="120"/>
                 <input id="ask" text=""/>
-            </horizontal>
-
-            <horizontal>
-                <text textSize="16sp" textColor="black" text="设置时间:" w="120"/>
-                <input id="period" text="10,11,15,16"/>
+                <button text="重新获取" id="reset_ask" style="Widget.AppCompat.Button.Borderless.Colored"/>
             </horizontal>
 
             <horizontal> 
                 <text textSize="16sp" textColor="black" text="选择标签:" w="120" />
-                <text textSize="16sp" text="" id="selected_lable" />
-                <button text="点击设置" id="label" style="Widget.AppCompat.Button.Borderless.Colored"/>
+                <button text="点击设置" id="selected_lable" style="Widget.AppCompat.Button.Borderless.Colored"/>
+            </horizontal>
+
+            <horizontal> 
+                <text textSize="16sp" textColor="black" text="搜索按钮坐标:" w="120" />
+                <button text="点击设置" id="search" style="Widget.AppCompat.Button.Borderless.Colored"/>
             </horizontal>
 
         </vertical>
         <button id="save" text="保存设置" margin="15 5"  />
                 
                 
-        <button id="run" text="开始运行" margin="15 0"  />
+        <button id="run_btn" text="开始运行" margin="15 0"  />
     </vertical>
 );
 
@@ -47,19 +47,34 @@ ui.emitter.on("resume", function() {
 });
 
 var storage = storages.create('sina');
-var ask = storage.get('ask');
-var selected_text = storage.get('selected_text');
+var ask = storage.get('ask','');
+var selected_text = storage.get('selected_text','');
+var search = storage.get('search','');
 
-var lable_list = ["萝卜", "白菜", "豆腐", "香菇"]
-if(typeof(ask) == 'undefined') {
-    ask = '你好！'
+var lable_list = ["默认标签"]
+lb_res = http.get('http://dyapi.bjbctx.com/api/weibo/labels',{
+    headers: {
+        'Accept': 'application/jgwl.douyin.v1+json'
+    }
+})
+lable_list = lb_res.body.json()
+
+if(typeof(ask) == 'undefined' || ask == '') {
+    rest_ask()
 }
-if(typeof(selected_text) == 'undefined'){
-    selected_text = '455'
+if(typeof(selected_text) == 'undefined' || selected_text == ''){
+    selected_text = lable_list[0]
+    storage.put('selected_text',selected_text)
 }
+
+if(typeof(search) == 'undefined' || search == ''){
+    search = '0.9,0.91'
+    storage.put('search',search)
+}
+
 ui.ask.setText(ask);
 ui.selected_lable.setText(selected_text)
-
+ui.search.setText(search)
 
 ui.save.click(function(){
     var ask = ui.ask.text();
@@ -69,45 +84,68 @@ ui.save.click(function(){
     storage.put('ask', ask);
     toast('保存成功！');
 })
+function rest_ask(){
+    ask_res = http.get('http://dyapi.bjbctx.com/api/weibo/resetAsk',{
+        headers: {
+            'Accept': 'application/jgwl.douyin.v1+json'
+        }
+    })
+    ask = ask_res.body.string()
+    ui.ask.setText(ask)
+    storage.put('ask', ask);
+}
+ui.reset_ask.click(rest_ask)
 
-ui.label.click(function(){
+ui.selected_lable.click(function(){
+
     dialogs.multiChoice("请至少选择一个标签", lable_list)
     .then(index => {
-       var lab_sel = [];
+        var lab_sel = [];
         for(var i=0;i<index.length;i++){
             lab_sel.push(lable_list[index[i]]);
         }
-        ui.selected_lable.setText(lab_sel.join(','));
+        if(lab_sel.length == 0){
+            alert('至少选择一个标签')
+        }else{
+            console.log(lab_sel)
+            ui.selected_lable.setText(lab_sel.join(','));
+            storage.put('selected_text',lab_sel.join(','))
+        }
     
     });
+
 });
 
-// var items = [
-//     {name: "竟品粉采集",url:"http://dyapi.bjbctx.com/collect_fans.js", desc: "采集竟品粉丝"}, 
-//     {name: "竟品地区",url:"http://dyapi.bjbctx.com/fans_area.js", desc: "对竞品粉丝补充地区信息"}
-// ];
+ui.search.click(function(){
+    var site = storage.get('search','0.9,0.91')
+    dialogs.rawInput("输入坐标在屏幕中的比例", site)
+    .then(site => {
+        var site_res = site.replace(/\s*/g,"").replace('，',',')
+        ui.search.setText(site_res)
+        storage.put('search',site_res)
+    });
+})
 
-// ui.list.setDataSource(items);
-// ui.list.on("item_click", function(item, i, itemView, listView){
-//     if(auto.service == null) {
-//         toast("请先开启无障碍服务！");
-//         return;
-//     }
-//     confirm('是否运行脚本:'+item.name).then(value=>{
-//         try{
-//             var res = http.get(item.url);
-//         }catch(err){
-//             alert(err) // 可执行
-//         }
-//         main(res)
-//     });
 
+ui.run_btn.click(function(){
+    if(auto.service == null) {
+        toast("请先开启无障碍服务！");
+        return;
+    }
+    toast('正在运行中')
+    try{
+        res = http.get('http://dyapi.bjbctx.com/sina/ask.js');
+    }catch(err){
+        alert(err) // 可执行
+    }
+    main(res)
+})
 
 
 // });
 
-// function main(res) {
-//     threads.start(function () {
-//         engines.execScript("hello world", res.body.string());
-//     });
-// }
+function main(res) {
+    threads.start(function () {
+        engines.execScript("hello world", res.body.string());
+    });
+}
