@@ -43,7 +43,7 @@ class SinaFans:
             config['login'] = {'Cookie': ''}
             config['collect'] = {}
             config['collect']['默认标签'] = ''
-            config['scrapy'] = {'sleep':'1','submit_url':'http://dyapi.bjbctx.local/api/weibo/addFans'}
+            config['scrapy'] = {'sleep':'1','submit_url':'http://dyapi.bjbctx.com/api/weibo/addFans'}
             config['label'] = {'default':'默认标签'}
 
             with open(config_file, 'w+') as configfile:
